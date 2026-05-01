@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>besta iPHONES - Mobile Shop Management System</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        },
+                        dark: '#0f172a',
+                        card: '#ffffff'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Dexie.js -->
+    <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
+    <script src="https://unpkg.com/dexie-export-import@1.0.3/dist/dexie-export-import.js"></script>
+
+    <!-- Google APIs -->
+    <script src="https://accounts.google.com/gsi/client" onload="gisLoadOkay()" async defer></script>
+    <script src="https://apis.google.com/js/api.js" onload="gapiLoadOkay()" async defer></script>
+</head>
+
+<body class="bg-gray-50 text-slate-800 font-sans h-screen overflow-hidden flex">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-dark text-slate-300 flex flex-col h-full shadow-xl transition-all duration-300 z-20">
+        <div class="h-16 flex items-center px-6 border-b border-slate-700">
+            <i class="fa-solid fa-mobile-screen-button text-brand-500 text-2xl mr-3"></i>
+            <span class="text-xl font-bold text-white tracking-wide">besta iPHONES</span>
+        </div>
+
+        <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+            <a href="#" data-target="dashboard"
+                class="nav-btn flex items-center px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition-colors bg-slate-800 text-white">
+                <i class="fa-solid fa-chart-pie w-6"></i> Dashboard
+            </a>
+            <a href="#" data-target="pos"
+                class="nav-btn flex items-center px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition-colors">
+                <i class="fa-solid fa-calculator w-6"></i> POS (Billing)
+            </a>
+            <a href="#" data-target="inventory"
+                class="nav-btn flex items-center px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition-colors">
+                <i class="fa-solid fa-box w-6"></i> Inventory
+            </a>
+            <a href="#" data-target="sales"
+                class="nav-btn flex items-center px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition-colors">
+                <i class="fa-solid fa-receipt w-6"></i> Sales History
+            </a>
+            <a href="#" data-target="customers"
+                class="nav-btn flex items-center px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition-colors">
+                <i class="fa-solid fa-users w-6"></i> Customers
+            </a>
+            <a href="#" data-target="finance"
+                class="nav-btn flex items-center px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition-colors">
+                <i class="fa-solid fa-chart-line w-6"></i> Finance & Reports
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-slate-700">
+            <a href="#" data-target="settings"
+                class="nav-btn flex items-center px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition-colors">
+                <i class="fa-solid fa-gear w-6"></i> Settings / Backup
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+        <!-- Header -->
+        <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10">
+            <h1 id="page-title" class="text-2xl font-semibold text-slate-800">Dashboard</h1>
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-slate-500 font-medium" id="current-time">--:--:--</div>
+                <div
+                    class="w-8 h-8 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold">
+                    A
+                </div>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="flex-1 overflow-auto p-6 relative bg-gray-50/50">
+
+            <!-- Dashboard View -->
+            <section id="view-dashboard" class="view-section active space-y-6">
+                <!-- Stats Row -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div
+                            class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 text-xl">
+                            <i class="fa-solid fa-sack-dollar"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Today's Sales</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="stat-today-sales">Rs 0</h3>
+                        </div>
+                    </div>
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div
+                            class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center text-green-500 text-xl">
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Today's Profit</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="stat-today-profit">Rs 0</h3>
+                        </div>
+                    </div>
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div
+                            class="w-14 h-14 rounded-full bg-purple-50 flex items-center justify-center text-purple-500 text-xl">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Total Products</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="stat-total-products">0</h3>
+                        </div>
+                    </div>
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div
+                            class="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center text-red-500 text-xl">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Low Stock Items</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="stat-low-stock">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Low Stock Alert & Recent Sales -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-5 border-b border-gray-100 bg-red-50/50 flex items-center justify-between">
+                            <h3 class="font-semibold text-red-800 flex items-center gap-2">
+                                <i class="fa-solid fa-bell"></i> Low Stock Alerts
+                            </h3>
+                        </div>
+                        <div class="p-0 overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                                        <th class="px-5 py-3 font-medium">Product</th>
+                                        <th class="px-5 py-3 font-medium">Category</th>
+                                        <th class="px-5 py-3 font-medium text-right">Stock</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="low-stock-list" class="divide-y divide-gray-100 text-sm">
+                                    <!-- Populated via JS -->
+                                    <tr>
+                                        <td colspan="3" class="px-5 py-4 text-center text-gray-500">No low stock items.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-800">Recent Sales</h3>
+                        </div>
+                        <div class="p-0 overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                                        <th class="px-5 py-3 font-medium">Bill No</th>
+                                        <th class="px-5 py-3 font-medium">Type</th>
+                                        <th class="px-5 py-3 font-medium text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-sales-list" class="divide-y divide-gray-100 text-sm">
+                                    <!-- Populated via JS -->
+                                    <tr>
+                                        <td colspan="3" class="px-5 py-4 text-center text-gray-500">No sales yet.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- POS View -->
+            <section id="view-pos" class="view-section hidden h-full">
+                <div class="flex flex-col lg:flex-row gap-6 h-full">
+                    <!-- Products List & Search -->
+                    <div
+                        class="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
+                        <div class="p-4 border-b border-gray-100 bg-gray-50/50">
+                            <div class="relative">
+                                <i
+                                    class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                <input type="text" id="pos-search" placeholder="Search by name or IMEI..."
+                                    class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all text-sm">
+                            </div>
+                            <div class="flex gap-2 mt-3 overflow-x-auto pb-1 hide-scrollbar" id="pos-categories">
+                                <button
+                                    class="px-4 py-1.5 rounded-full bg-brand-50 text-brand-600 text-xs font-medium border border-brand-200 whitespace-nowrap active-category"
+                                    data-cat="all">All</button>
+                                <button
+                                    class="px-4 py-1.5 rounded-full bg-gray-50 text-gray-600 text-xs font-medium border border-gray-200 whitespace-nowrap hover:bg-gray-100"
+                                    data-cat="iPhone">iPhone</button>
+                                <button
+                                    class="px-4 py-1.5 rounded-full bg-gray-50 text-gray-600 text-xs font-medium border border-gray-200 whitespace-nowrap hover:bg-gray-100"
+                                    data-cat="Accessory">Accessories</button>
+                            </div>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-4 bg-gray-50/30">
+                            <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4" id="pos-product-list">
+                                <!-- Products Populated via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cart Area -->
+                    <div
+                        class="w-full lg:w-96 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden shrink-0">
+                        <!-- Customer & Bill Info -->
+                        <div class="p-4 border-b border-gray-100 bg-gray-50/50 space-y-3">
+                            <div class="flex rounded-lg overflow-hidden border border-gray-200 p-1 bg-white">
+                                <button id="btn-type-retail"
+                                    class="flex-1 py-1.5 text-xs font-semibold rounded-md bg-brand-500 text-white shadow-sm transition-all">Retail</button>
+                                <button id="btn-type-wholesale"
+                                    class="flex-1 py-1.5 text-xs font-medium rounded-md text-gray-500 hover:text-gray-700 transition-all">Wholesale</button>
+                            </div>
+                            <div class="relative">
+                                <input type="text" id="pos-customer-name" placeholder="Customer Name (Optional)"
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                            </div>
+                        </div>
+
+                        <!-- Cart Items -->
+                        <div class="flex-1 overflow-y-auto p-4 space-y-3" id="pos-cart-items">
+                            <!-- Empty Cart State -->
+                            <div class="h-full flex flex-col items-center justify-center text-gray-400 space-y-2">
+                                <i class="fa-solid fa-cart-arrow-down text-4xl"></i>
+                                <p class="text-sm">Cart is empty</p>
+                            </div>
+                        </div>
+
+                        <!-- Cart Totals -->
+                        <div class="p-4 border-t border-gray-100 bg-gray-50/50 space-y-2">
+                            <div class="flex justify-between text-sm text-gray-600">
+                                <span>Subtotal</span>
+                                <span class="font-medium" id="pos-subtotal">Rs 0.00</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm text-gray-600">
+                                <span>Discount</span>
+                                <div class="flex items-center gap-1">
+                                    <span class="text-gray-400">Rs</span>
+                                    <input type="number" id="pos-discount" value="0"
+                                        class="w-20 px-2 py-1 text-right rounded-md border border-gray-200 focus:outline-none focus:border-brand-500 text-sm">
+                                </div>
+                            </div>
+                            <hr class="border-gray-200 my-2">
+                            <div class="flex justify-between text-lg font-bold text-gray-800">
+                                <span>Total</span>
+                                <span id="pos-total">Rs 0.00</span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 mt-4">
+                                <select id="pos-payment-method"
+                                    class="col-span-2 w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all bg-white">
+                                    <option value="Cash">Cash</option>
+                                    <option value="Card">Card</option>
+                                    <option value="Installment">Installment</option>
+                                </select>
+                                <button id="btn-clear-cart"
+                                    class="py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 transition-colors">Clear</button>
+                                <button id="btn-checkout"
+                                    class="py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 shadow-md shadow-brand-500/30 transition-all">Checkout</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Inventory View -->
+            <section id="view-inventory" class="view-section hidden space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
+                    <div class="p-5 border-b border-gray-100 flex items-center justify-between gap-4 flex-wrap">
+                        <div class="relative flex-1 min-w-[200px] max-w-md">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="inv-search" placeholder="Search inventory..."
+                                class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm">
+                        </div>
+                        <button id="btn-add-product"
+                            class="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 shadow-sm transition-colors flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Add Product
+                        </button>
+                    </div>
+
+                    <div class="flex-1 overflow-auto">
+                        <table class="w-full text-left border-collapse min-w-[800px]">
+                            <thead class="sticky top-0 bg-gray-50 text-gray-500 text-xs uppercase tracking-wider z-10">
+                                <tr>
+                                    <th class="px-5 py-3 font-medium">Name</th>
+                                    <th class="px-5 py-3 font-medium">Category</th>
+                                    <th class="px-5 py-3 font-medium">IMEI/Serial</th>
+                                    <th class="px-5 py-3 font-medium text-right">Buying (Rs)</th>
+                                    <th class="px-5 py-3 font-medium text-right">Wholesale (Rs)</th>
+                                    <th class="px-5 py-3 font-medium text-right">Retail (Rs)</th>
+                                    <th class="px-5 py-3 font-medium text-center">Stock</th>
+                                    <th class="px-5 py-3 font-medium text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-list" class="divide-y divide-gray-100 text-sm bg-white">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sales History View -->
+            <section id="view-sales" class="view-section hidden space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
+                    <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+                        <div class="relative flex-1 min-w-[200px] max-w-md">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="sales-search" placeholder="Search bill no or customer..."
+                                class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm">
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-auto">
+                        <table class="w-full text-left border-collapse min-w-[800px]">
+                            <thead class="sticky top-0 bg-gray-50 text-gray-500 text-xs uppercase tracking-wider z-10">
+                                <tr>
+                                    <th class="px-5 py-3 font-medium">Bill No</th>
+                                    <th class="px-5 py-3 font-medium">Date</th>
+                                    <th class="px-5 py-3 font-medium">Customer</th>
+                                    <th class="px-5 py-3 font-medium">Items</th>
+                                    <th class="px-5 py-3 font-medium">Type</th>
+                                    <th class="px-5 py-3 font-medium">Payment</th>
+                                    <th class="px-5 py-3 font-medium text-right">Total (Rs)</th>
+                                    <th class="px-5 py-3 font-medium text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sales-history-list" class="divide-y divide-gray-100 text-sm bg-white">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Customers View -->
+            <section id="view-customers" class="view-section hidden space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
+                    <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+                        <div class="relative flex-1 min-w-[200px] max-w-md">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="customer-search" placeholder="Search customers..."
+                                class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm">
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-auto">
+                        <table class="w-full text-left border-collapse min-w-[800px]">
+                            <thead class="sticky top-0 bg-gray-50 text-gray-500 text-xs uppercase tracking-wider z-10">
+                                <tr>
+                                    <th class="px-5 py-3 font-medium">ID</th>
+                                    <th class="px-5 py-3 font-medium">Name</th>
+                                    <th class="px-5 py-3 font-medium">Phone</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customers-list" class="divide-y divide-gray-100 text-sm bg-white">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Finance & Reports View -->
+            <section id="view-finance" class="view-section hidden space-y-6">
+                <!-- Financial Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full opacity-50"></div>
+                        <p class="text-sm font-medium text-gray-500 relative z-10 mb-1">Total Revenue</p>
+                        <h3 class="text-3xl font-bold text-gray-800 relative z-10" id="fin-total-revenue">Rs 0.00</h3>
+                        <p class="text-xs text-blue-600 mt-2 font-medium"><i
+                                class="fa-solid fa-money-bill-wave mr-1"></i> From all sales</p>
+                    </div>
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-red-50 rounded-full opacity-50"></div>
+                        <p class="text-sm font-medium text-gray-500 relative z-10 mb-1">Cost of Goods Sold (COGS)</p>
+                        <h3 class="text-3xl font-bold text-gray-800 relative z-10" id="fin-cogs">Rs 0.00</h3>
+                        <p class="text-xs text-red-500 mt-2 font-medium"><i
+                                class="fa-solid fa-arrow-trend-down mr-1"></i> Buying cost of sold items</p>
+                    </div>
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-green-50 rounded-full opacity-50"></div>
+                        <p class="text-sm font-medium text-gray-500 relative z-10 mb-1">Gross Profit</p>
+                        <h3 class="text-3xl font-bold text-gray-800 relative z-10" id="fin-gross-profit">Rs 0.00</h3>
+                        <p class="text-xs text-green-600 mt-2 font-medium"><i
+                                class="fa-solid fa-scale-balanced mr-1"></i> Revenue - COGS</p>
+                    </div>
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-orange-50 rounded-full opacity-50"></div>
+                        <p class="text-sm font-medium text-gray-500 relative z-10 mb-1">Total Expenses</p>
+                        <h3 class="text-3xl font-bold text-gray-800 relative z-10" id="fin-expenses">Rs 0.00</h3>
+                        <p class="text-xs text-orange-500 mt-2 font-medium"><i class="fa-solid fa-receipt mr-1"></i>
+                            Logged expenses</p>
+                    </div>
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center relative overflow-hidden bg-gradient-to-br from-brand-50 to-white border-brand-100">
+                        <p class="text-sm font-medium text-brand-700 relative z-10 mb-1">Net Profit</p>
+                        <h3 class="text-3xl font-bold text-brand-900 relative z-10" id="fin-net-profit">Rs 0.00</h3>
+                        <p class="text-xs text-brand-600 mt-2 font-medium"><i class="fa-solid fa-piggy-bank mr-1"></i>
+                            Gross Profit - Expenses</p>
+                    </div>
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-50 rounded-full opacity-50"></div>
+                        <p class="text-sm font-medium text-gray-500 relative z-10 mb-1">Inventory Value</p>
+                        <h3 class="text-3xl font-bold text-gray-800 relative z-10" id="fin-inventory-value">Rs 0.00</h3>
+                        <p class="text-xs text-purple-600 mt-2 font-medium"><i
+                                class="fa-solid fa-boxes-stacked mr-1"></i> Cost of current stock</p>
+                    </div>
+                </div>
+
+                <!-- Expenses Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Add Expense Form -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden h-fit">
+                        <div class="p-5 border-b border-gray-100 bg-gray-50/50">
+                            <h3 class="font-semibold text-gray-800"><i
+                                    class="fa-solid fa-plus-circle text-brand-500 mr-2"></i>Add Expense</h3>
+                        </div>
+                        <div class="p-5">
+                            <form id="form-expense" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Date</label>
+                                    <input type="date" id="exp-date" required
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Amount (Rs) *</label>
+                                    <input type="number" id="exp-amount" required min="0" step="0.01"
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Category *</label>
+                                    <select id="exp-category" required
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm bg-white">
+                                        <option value="Rent">Rent</option>
+                                        <option value="Electricity">Electricity</option>
+                                        <option value="Salary">Salary</option>
+                                        <option value="Maintenance">Maintenance</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                                    <input type="text" id="exp-desc"
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm">
+                                </div>
+                                <button type="submit"
+                                    class="w-full py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 shadow-md shadow-brand-500/30 transition-all">Save
+                                    Expense</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Expenses List -->
+                    <div
+                        class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-h-[400px]">
+                        <div class="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                            <h3 class="font-semibold text-gray-800">Recent Expenses</h3>
+                        </div>
+                        <div class="flex-1 overflow-auto">
+                            <table class="w-full text-left border-collapse min-w-[500px]">
+                                <thead
+                                    class="sticky top-0 bg-gray-50 text-gray-500 text-xs uppercase tracking-wider z-10">
+                                    <tr>
+                                        <th class="px-5 py-3 font-medium">Date</th>
+                                        <th class="px-5 py-3 font-medium">Category</th>
+                                        <th class="px-5 py-3 font-medium">Description</th>
+                                        <th class="px-5 py-3 font-medium text-right">Amount (Rs)</th>
+                                        <th class="px-5 py-3 font-medium text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expenses-list" class="divide-y divide-gray-100 text-sm bg-white">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings / Backup View -->
+            <section id="view-settings" class="view-section hidden space-y-6">
+                <div class="max-w-2xl bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-6 border-b border-gray-100">
+                        <h2 class="text-lg font-semibold text-gray-800">Database Backup & Restore</h2>
+                        <p class="text-sm text-gray-500 mt-1">Export your data to a file for safekeeping, or restore it
+                            from a previous backup.</p>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <div class="p-4 bg-brand-50 rounded-xl border border-brand-100 flex items-start gap-4">
+                            <div class="mt-1 text-brand-500"><i class="fa-solid fa-download text-xl"></i></div>
+                            <div>
+                                <h3 class="font-medium text-brand-900">Export Database</h3>
+                                <p class="text-sm text-brand-700 mt-1 mb-3">Download a complete copy of your inventory,
+                                    sales, and customers.</p>
+                                <button id="btn-export-db"
+                                    class="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 shadow-sm transition-colors">Download
+                                    Backup</button>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-purple-50 rounded-xl border border-purple-100 flex items-start gap-4">
+                            <div class="mt-1 text-purple-500"><i class="fa-solid fa-upload text-xl"></i></div>
+                            <div class="w-full">
+                                <h3 class="font-medium text-purple-900">Restore Database</h3>
+                                <p class="text-sm text-purple-700 mt-1 mb-3">Upload a previously saved `.json` backup
+                                    file. <span class="font-bold text-red-600">Warning: This will overwrite existing
+                                        data!</span></p>
+                                <input type="file" id="file-import-db" accept=".json" class="hidden">
+                                <button id="btn-import-db"
+                                    class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 shadow-sm transition-colors">Select
+                                    Backup File</button>
+                                <span id="import-status" class="text-sm ml-3 text-gray-500"></span>
+                            </div>
+                        </div>
+
+                        <hr class="border-gray-200">
+
+                        <div class="p-4 bg-green-50 rounded-xl border border-green-100 flex items-start gap-4">
+                            <div class="mt-1 text-green-500"><i class="fa-brands fa-google-drive text-xl"></i></div>
+                            <div class="w-full">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="font-medium text-green-900">Google Drive Sync</h3>
+                                    <div id="gdrive-status" class="text-xs font-medium text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">Not Logged In</div>
+                                </div>
+                                <p class="text-sm text-green-800 mt-1 mb-3">Securely backup and restore your data directly to your Google Drive.</p>
+                                
+                                <div class="flex gap-2 flex-wrap" id="gdrive-actions">
+                                    <button id="btn-gdrive-login" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors flex items-center gap-2">
+                                        <i class="fa-brands fa-google text-red-500"></i> Login with Google
+                                    </button>
+                                    <button id="btn-gdrive-backup" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm transition-colors hidden flex items-center gap-2">
+                                        <i class="fa-solid fa-cloud-arrow-up"></i> Backup to Drive
+                                    </button>
+                                    <button id="btn-gdrive-restore" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm transition-colors hidden flex items-center gap-2">
+                                        <i class="fa-solid fa-cloud-arrow-down"></i> Restore from Drive
+                                    </button>
+                                    <button id="btn-gdrive-logout" class="px-4 py-2 bg-white text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-50 shadow-sm transition-colors hidden">
+                                        Logout
+                                    </button>
+                                </div>
+                                <span id="gdrive-message" class="block mt-2 text-sm text-green-700 font-medium"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Modals -->
+
+    <!-- Add/Edit Product Modal -->
+    <div id="modal-product"
+        class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform scale-95 opacity-0 transition-all duration-300"
+            id="modal-product-content">
+            <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-800" id="modal-product-title">Add New Product</h3>
+                <button class="text-gray-400 hover:text-gray-600 transition-colors close-modal">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <form id="form-product">
+                    <input type="hidden" id="prod-id">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="col-span-2">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Product Name *</label>
+                            <input type="text" id="prod-name" required
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Category</label>
+                            <select id="prod-category"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm bg-white">
+                                <option value="iPhone">iPhone</option>
+                                <option value="Accessory">Accessory</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">IMEI / Serial</label>
+                            <input type="text" id="prod-imei"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Buying Price (Rs) *</label>
+                            <input type="number" id="prod-buying" required min="0"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Initial Stock *</label>
+                            <input type="number" id="prod-stock" required min="0"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Wholesale Price (Rs) *</label>
+                            <input type="number" id="prod-wholesale" required min="0"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Retail Price (Rs) *</label>
+                            <input type="number" id="prod-retail" required min="0"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="p-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                <button
+                    class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors close-modal">Cancel</button>
+                <button form="form-product" type="submit"
+                    class="px-4 py-2 rounded-lg text-sm font-medium bg-brand-600 text-white hover:bg-brand-700 transition-colors shadow-sm">Save
+                    Product</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Print Area (Hidden until print) -->
+    <div id="print-receipt" class="hidden">
+        <!-- Structure generated in JS -->
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+
+    <script src="js/db.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
