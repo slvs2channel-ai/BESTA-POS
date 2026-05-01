@@ -1,0 +1,80 @@
+/* Custom CSS for MobiPOS */
+
+/* Hide scrollbar for clean look but keep functionality */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Custom Scrollbar for normal areas */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Active Navigation Style */
+.nav-btn.active {
+    background-color: #1e293b;
+    color: #ffffff;
+    border-left: 4px solid #0ea5e9;
+}
+
+/* Modal Animations */
+#modal-product:not(.hidden) #modal-product-content {
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* Toast Animation */
+.toast-enter {
+    transform: translateX(100%);
+    opacity: 0;
+}
+.toast-enter-active {
+    transform: translateX(0);
+    opacity: 1;
+    transition: all 300ms ease-out;
+}
+.toast-exit {
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 300ms ease-in;
+}
+
+/* Print Styles for Receipt */
+@media print {
+    body > *:not(#print-receipt) {
+        display: none !important;
+    }
+    #print-receipt {
+        display: block !important;
+        visibility: visible !important;
+        position: relative;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 80mm; /* standard thermal printer width */
+        font-family: 'Courier New', Courier, monospace; /* mono font for receipt */
+        color: #000;
+        margin: 0;
+        padding: 0;
+    }
+    
+    /* Hide some print specific browser default styles like URLs */
+    @page {
+        margin: 0;
+    }
+}
