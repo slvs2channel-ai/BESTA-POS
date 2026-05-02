@@ -45,12 +45,31 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPricingMode = 'retail'; // 'retail' or 'wholesale'
     let cart = [];
     let currentCategoryFilter = 'all';
+    let isProfitVisible = false;
 
     // --- UI Elements ---
     const navBtns = document.querySelectorAll('.nav-btn');
     const viewSections = document.querySelectorAll('.view-section');
     const pageTitle = document.getElementById('page-title');
     const currentTimeEl = document.getElementById('current-time');
+
+    // --- Dashboard Interactions ---
+    const btnToggleProfit = document.getElementById('btn-toggle-profit');
+    const iconToggleProfit = document.getElementById('icon-toggle-profit');
+    const statTodayProfit = document.getElementById('stat-today-profit');
+
+    if (btnToggleProfit) {
+        btnToggleProfit.addEventListener('click', () => {
+            isProfitVisible = !isProfitVisible;
+            if (isProfitVisible) {
+                iconToggleProfit.className = 'fa-solid fa-eye';
+                statTodayProfit.textContent = statTodayProfit.getAttribute('data-value');
+            } else {
+                iconToggleProfit.className = 'fa-solid fa-eye-slash';
+                statTodayProfit.textContent = '****';
+            }
+        });
+    }
 
     // --- Clock ---
     setInterval(() => {
@@ -149,6 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await db.products.add(product);
                 showToast('Product added successfully!');
             }
+            if (typeof debouncedBackup === 'function') debouncedBackup();
             modalProduct.classList.add('hidden');
             loadInventory();
             if (document.getElementById('view-pos').classList.contains('active')) loadPOS();
@@ -224,6 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (confirm('Are you sure you want to delete this product?')) {
                     const id = parseInt(e.currentTarget.getAttribute('data-id'));
                     await db.products.delete(id);
+                    if (typeof debouncedBackup === 'function') debouncedBackup();
                     showToast('Product deleted');
                     loadInventory();
                 }
@@ -475,6 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Save Sale
             const saleId = await db.sales.add(sale);
+            if (typeof debouncedBackup === 'function') debouncedBackup();
 
             showToast('Sale successful!');
 
@@ -574,7 +596,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalProfitAmount = todaysSales.reduce((sum, s) => sum + (s.profit || 0), 0);
 
         document.getElementById('stat-today-sales').textContent = formatCurrency(totalSalesAmount);
-        document.getElementById('stat-today-profit').textContent = formatCurrency(totalProfitAmount);
+        
+        const profitText = formatCurrency(totalProfitAmount);
+        const profitEl = document.getElementById('stat-today-profit');
+        if(profitEl) {
+            profitEl.setAttribute('data-value', profitText);
+            profitEl.textContent = isProfitVisible ? profitText : '****';
+        }
 
         const productsCount = await db.products.count();
         document.getElementById('stat-total-products').textContent = productsCount;
@@ -617,6 +645,181 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             });
         }
+
+        // Generate AI Insights
+        generateBusinessInsights(allSales, allProducts);
+
+        // Generate Analytics Prediction
+        generateAnalyticsPrediction(allSales);
+    }
+
+    function generateBusinessInsights(sales, products) {
+        const insightsList = document.getElementById('ai-insights-list');
+        if (!insightsList) return;
+
+        insightsList.innerHTML = '';
+        const insights = [];
+
+        // 1. Check for fast-moving items with low stock
+        const last7Days = new Date();
+        last7Days.setDate(last7Days.getDate() - 7);
+        
+        const recentSales = sales.filter(s => new Date(s.date) >= last7Days);
+        const itemSalesCount = {};
+        
+        recentSales.forEach(sale => {
+            if (sale.items) {
+                sale.items.forEach(item => {
+                    itemSalesCount[item.productId] = (itemSalesCount[item.productId] || 0) + item.qty;
+                });
+            }
+        });
+
+        // Find the top selling item that has low stock
+        let fastMoverLowStock = null;
+        let maxSold = 0;
+
+        for (const p of products) {
+            const soldRecently = itemSalesCount[p.id] || 0;
+            if (soldRecently > 0 && p.stock <= 10) {
+                if (soldRecently > maxSold) {
+                    maxSold = soldRecently;
+                    fastMoverLowStock = p;
+                }
+            }
+        }
+
+        if (fastMoverLowStock) {
+            insights.push({
+                icon: 'fa-bolt text-yellow-400',
+                text: `You've sold <strong>${maxSold}</strong> units of <strong>${fastMoverLowStock.name}</strong> recently, but only have <strong>${fastMoverLowStock.stock}</strong> left in stock. Consider restocking soon to avoid losing sales.`
+            });
+        }
+
+        // 2. High Margin Product Promotion
+        let bestMarginProduct = null;
+        let bestMargin = 0;
+        for (const p of products) {
+            if (p.buyingPrice && p.retailPrice > p.buyingPrice) {
+                const margin = (p.retailPrice - p.buyingPrice) / p.buyingPrice;
+                if (margin > bestMargin && p.stock > 0) {
+                    bestMargin = margin;
+                    bestMarginProduct = p;
+                }
+            }
+        }
+
+        if (bestMarginProduct && bestMargin > 0.2) {
+            insights.push({
+                icon: 'fa-arrow-trend-up text-green-400',
+                text: `Your highest profit margin is from <strong>${bestMarginProduct.name}</strong> (${(bestMargin*100).toFixed(0)}%). Try to promote this item more since you have ${bestMarginProduct.stock} in stock.`
+            });
+        }
+
+        // 3. Dead stock
+        let deadStockItems = 0;
+        for (const p of products) {
+            if (p.stock > 0 && !(itemSalesCount[p.id] > 0)) {
+                deadStockItems++;
+            }
+        }
+        
+        if (deadStockItems > 0 && products.length > 0) {
+             insights.push({
+                icon: 'fa-box-open text-orange-400',
+                text: `You have <strong>${deadStockItems}</strong> items that haven't sold in the last 7 days. Consider a small discount or bundle offer to clear inventory and free up cash.`
+            });
+        }
+
+        // 4. General performance
+        if (recentSales.length === 0) {
+            insights.push({
+                icon: 'fa-chart-line text-blue-400',
+                text: `It's been a bit quiet recently. Try running a promotion or reaching out to past customers to boost sales.`
+            });
+        } else if (insights.length < 4) {
+            insights.push({
+                 icon: 'fa-check-circle text-emerald-400',
+                 text: `Your business has processed <strong>${recentSales.length}</strong> sales in the last 7 days. Keep up the great work!`
+            });
+        }
+
+        // Render
+        insights.forEach(insight => {
+            const div = document.createElement('div');
+            div.className = 'bg-white/10 rounded-xl p-4 border border-white/5 flex items-start gap-3 transition-colors hover:bg-white/20';
+            div.innerHTML = `
+                <div class="mt-0.5 text-lg"><i class="fa-solid ${insight.icon}"></i></div>
+                <div class="text-indigo-50 leading-relaxed text-[13px]">${insight.text}</div>
+            `;
+            insightsList.appendChild(div);
+        });
+    }
+
+    function generateAnalyticsPrediction(sales) {
+        const predictionList = document.getElementById('analytics-prediction-list');
+        if (!predictionList) return;
+
+        predictionList.innerHTML = '';
+        const predictions = [];
+
+        // Calculate average daily sales over last 7 days
+        const last7Days = new Date();
+        last7Days.setDate(last7Days.getDate() - 7);
+        
+        const recentSales = sales.filter(s => new Date(s.date) >= last7Days);
+        let totalRevenue = 0;
+        let totalProfit = 0;
+        
+        recentSales.forEach(s => {
+            totalRevenue += s.totalAmount || 0;
+            totalProfit += s.profit || 0;
+        });
+
+        const avgDailyRevenue = totalRevenue / 7;
+        const avgDailyProfit = totalProfit / 7;
+
+        // Project next 7 days
+        const projectedRevenue7 = avgDailyRevenue * 7;
+        const projectedProfit7 = avgDailyProfit * 7;
+        
+        // Project next 30 days
+        const projectedRevenue30 = avgDailyRevenue * 30;
+
+        predictions.push({
+            icon: 'fa-calendar-week text-blue-400',
+            text: `Based on the last 7 days, your projected revenue for the next week is <strong>${formatCurrency(projectedRevenue7)}</strong> with an estimated profit of <strong>${formatCurrency(projectedProfit7)}</strong>.`
+        });
+
+        predictions.push({
+            icon: 'fa-calendar-days text-purple-400',
+            text: `If current trends continue, your estimated monthly revenue will be around <strong>${formatCurrency(projectedRevenue30)}</strong>.`
+        });
+        
+        // Find best day of the week
+        const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+        sales.forEach(s => {
+            const d = new Date(s.date).getDay();
+            dayCounts[d]++;
+        });
+        const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const bestDayIdx = dayCounts.indexOf(Math.max(...dayCounts));
+        if (dayCounts[bestDayIdx] > 0) {
+            predictions.push({
+                icon: 'fa-star text-yellow-400',
+                text: `Historically, <strong>${daysOfWeek[bestDayIdx]}</strong> is your busiest day. Ensure you have enough stock and staff ready.`
+            });
+        }
+
+        predictions.forEach(pred => {
+            const div = document.createElement('div');
+            div.className = 'bg-white/10 rounded-xl p-4 border border-white/5 flex items-start gap-3 transition-colors hover:bg-white/20';
+            div.innerHTML = `
+                <div class="mt-0.5 text-lg"><i class="fa-solid ${pred.icon}"></i></div>
+                <div class="text-brand-50 leading-relaxed text-[13px]">${pred.text}</div>
+            `;
+            predictionList.appendChild(div);
+        });
     }
 
 
@@ -705,6 +908,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Delete the sale
                     await db.sales.delete(id);
+                    if (typeof debouncedBackup === 'function') debouncedBackup();
 
                     // Load into POS
                     cart = [];
@@ -766,6 +970,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     await db.sales.delete(id);
+                    if (typeof debouncedBackup === 'function') debouncedBackup();
                     showToast('Bill deleted and stock restored.');
                     loadSalesHistory();
                 }
@@ -828,6 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await db.expenses.add({
                 date, amount, category, description
             });
+            if (typeof debouncedBackup === 'function') debouncedBackup();
             showToast('Expense added successfully!');
             formExpense.reset();
             document.getElementById('exp-date').valueAsDate = new Date();
@@ -896,6 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (confirm('Are you sure you want to delete this expense?')) {
                     const id = parseInt(e.currentTarget.getAttribute('data-id'));
                     await db.expenses.delete(id);
+                    if (typeof debouncedBackup === 'function') debouncedBackup();
                     showToast('Expense deleted');
                     loadFinance();
                 }
@@ -985,11 +1192,84 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        let autoBackupTimeout = null;
+        let isAuthenticating = false;
+
+        // Define token callback globally for both manual and auto login
+        function handleCredentialResponse(resp) {
+            isAuthenticating = false;
+            if (resp.error !== undefined) {
+                console.error("Auth error:", resp);
+                return;
+            }
+            accessToken = resp.access_token;
+            gapi.client.setToken({ access_token: resp.access_token });
+            
+            // Save token and auto-login preference
+            const tokenObj = {
+                token: resp.access_token,
+                expiresAt: Date.now() + 3500 * 1000 // Expire slightly before 1 hour
+            };
+            localStorage.setItem('gdriveToken', JSON.stringify(tokenObj));
+            localStorage.setItem('gdriveAutoLogin', 'true');
+            
+            showToast('Successfully logged in to Google Drive!', 'success');
+            updateGdriveUI(true);
+            
+            // Trigger auto-restore on fresh login
+            checkAndAutoRestore();
+        }
+
         // Listen for readiness of Google APIs
         window.addEventListener('googleAuthReady', () => {
             if (gapiInited && gisInited) {
-                // Check if we already have a valid token (not possible with implicit flow without calling requestAccessToken, but we setup the click handler)
+                tokenClient.callback = handleCredentialResponse;
+                
+                // 1. Check if we have a valid saved token
+                const savedTokenStr = localStorage.getItem('gdriveToken');
+                if (savedTokenStr) {
+                    try {
+                        const savedToken = JSON.parse(savedTokenStr);
+                        if (savedToken.expiresAt > Date.now()) {
+                            // Token is still valid! Use it immediately.
+                            gapi.client.setToken({ access_token: savedToken.token });
+                            updateGdriveUI(true);
+                            return; // Success!
+                        }
+                    } catch(e) {}
+                }
+
+                // 2. If token expired but auto-login is enabled, try silent auth
+                if (localStorage.getItem('gdriveAutoLogin') === 'true') {
+                    isAuthenticating = true;
+                    try {
+                        tokenClient.requestAccessToken({ prompt: '' });
+                    } catch(err) {
+                        console.error("Silent login failed:", err);
+                    }
+                    
+                    // Reset authenticating flag if popup was blocked
+                    setTimeout(() => {
+                        if (!gapi.client.getToken()) isAuthenticating = false;
+                    }, 3000);
+                }
             }
+        });
+
+        // 3. Fallback: If silent auth was blocked by browser, try again on first user click
+        document.addEventListener('click', (e) => {
+            if (isAuthenticating || gapi.client.getToken() || localStorage.getItem('gdriveAutoLogin') !== 'true' || !gapiInited || !gisInited) return;
+            // Ignore manual login/logout buttons
+            if (e.target.closest && (e.target.closest('#btn-gdrive-login') || e.target.closest('#btn-gdrive-logout'))) return;
+
+            isAuthenticating = true;
+            try {
+                tokenClient.requestAccessToken({ prompt: '' });
+            } catch(err) {}
+            
+            setTimeout(() => {
+                if (!gapi.client.getToken()) isAuthenticating = false;
+            }, 3000);
         });
 
         btnGdriveLogin.addEventListener('click', () => {
@@ -997,22 +1277,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("Please set your GOOGLE_CLIENT_ID and GOOGLE_API_KEY in js/app.js first!");
                 return;
             }
-
-            tokenClient.callback = async (resp) => {
-                if (resp.error !== undefined) {
-                    throw (resp);
-                }
-                accessToken = resp.access_token;
-                gapi.client.setToken({ access_token: resp.access_token });
-                showToast('Successfully logged in to Google Drive!', 'success');
-                updateGdriveUI(true);
-            };
-
+            tokenClient.callback = handleCredentialResponse;
             if (gapi.client.getToken() === null) {
-                // Prompt the user to select a Google Account and ask for consent to share their data
                 tokenClient.requestAccessToken({ prompt: 'consent' });
             } else {
-                // Skip display of account chooser and consent dialog for an existing session.
                 tokenClient.requestAccessToken({ prompt: '' });
             }
         });
@@ -1023,10 +1291,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 google.accounts.oauth2.revoke(token.access_token);
                 gapi.client.setToken('');
                 accessToken = null;
+                localStorage.removeItem('gdriveAutoLogin');
+                localStorage.removeItem('gdriveToken');
                 updateGdriveUI(false);
                 showToast('Logged out from Google Drive.');
             }
         });
+
+        async function checkAndAutoRestore() {
+            try {
+                const prodCount = await db.products.count();
+                const salesCount = await db.sales.count();
+                
+                if (prodCount === 0 && salesCount === 0) {
+                    showToast('Empty database detected. Checking for Google Drive backup...', 'info');
+                    const backupFile = await findBackupFile();
+                    if (backupFile) {
+                        showToast('Backup found! Restoring data...', 'info');
+                        const response = await gapi.client.drive.files.get({
+                            fileId: backupFile.id,
+                            alt: 'media'
+                        });
+                        const blob = new Blob([response.body], { type: 'application/json' });
+                        await db.delete();
+                        await db.open();
+                        await db.import(blob);
+                        showToast('Auto-Restore successful! Reloading...', 'success');
+                        setTimeout(() => window.location.reload(), 1500);
+                    }
+                }
+            } catch (err) {
+                console.error("Auto-restore failed:", err);
+            }
+        }
 
         // Helper: Find existing backup file in AppData folder
         async function findBackupFile() {
@@ -1046,20 +1343,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return files.find(f => f.name === 'besta_iphones_backup.json');
         }
 
-        btnGdriveBackup.addEventListener('click', async () => {
+        async function performDriveBackup(silent = false) {
+            if (!gapi.client.getToken()) return; // Not logged in
             try {
-                gdriveMessage.textContent = "Preparing backup...";
-                gdriveMessage.className = "block mt-2 text-sm text-blue-600 font-medium";
+                if (!silent) {
+                    gdriveMessage.textContent = "Preparing backup...";
+                    gdriveMessage.className = "block mt-2 text-sm text-blue-600 font-medium";
+                }
 
                 // 1. Export DB to Blob
                 const blob = await db.export();
-                const metadata = {
-                    'name': 'besta_iphones_backup.json',
-                    'parents': ['appDataFolder']
-                };
 
                 // 2. Check if file already exists
                 const existingFile = await findBackupFile();
+
+                const metadata = existingFile ? {} : {
+                    'name': 'besta_iphones_backup.json',
+                    'parents': ['appDataFolder']
+                };
 
                 // 3. Create multipart body
                 const boundary = '-------314159265358979323846';
@@ -1072,7 +1373,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const base64Data = reader.result.split(',')[1];
                     const multipartRequestBody =
                         delimiter +
-                        'Content-Type: application/json\r\n\r\n' +
+                        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
                         JSON.stringify(metadata) +
                         delimiter +
                         'Content-Type: application/json\r\n' +
@@ -1081,7 +1382,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         close_delim;
 
                     let request;
-                    gdriveMessage.textContent = "Uploading to Google Drive...";
+                    if (!silent) gdriveMessage.textContent = "Uploading to Google Drive...";
 
                     if (existingFile) {
                         // Update existing
@@ -1105,11 +1406,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     request.execute(function (file) {
                         if (file && file.id) {
-                            showToast('Backup successfully saved to Google Drive!', 'success');
+                            if (!silent) showToast('Backup successfully saved to Google Drive!', 'success');
                             gdriveMessage.textContent = "Last backup: " + new Date().toLocaleString();
                             gdriveMessage.className = "block mt-2 text-sm text-green-700 font-medium";
                         } else {
-                            showToast('Failed to save to Google Drive.', 'error');
+                            if (!silent) showToast('Failed to save to Google Drive.', 'error');
                             gdriveMessage.textContent = "Backup failed.";
                             gdriveMessage.className = "block mt-2 text-sm text-red-600 font-medium";
                         }
@@ -1117,10 +1418,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
             } catch (error) {
                 console.error(error);
-                showToast('Backup error: ' + error.message, 'error');
+                if (!silent) showToast('Backup error: ' + error.message, 'error');
                 gdriveMessage.textContent = "";
             }
-        });
+        }
+
+        function debouncedBackup() {
+            if (autoBackupTimeout) clearTimeout(autoBackupTimeout);
+            autoBackupTimeout = setTimeout(() => {
+                performDriveBackup(true);
+            }, 3000); // Wait 3 seconds after last modification
+        }
+
+        btnGdriveBackup.addEventListener('click', () => performDriveBackup(false));
 
         btnGdriveRestore.addEventListener('click', async () => {
             if (!confirm('Are you sure you want to restore from Google Drive? ALL CURRENT DATA WILL BE REPLACED!')) return;

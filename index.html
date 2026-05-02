@@ -40,7 +40,7 @@
     </script>
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="styles.css">
 
     <!-- Dexie.js -->
     <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
@@ -133,9 +133,14 @@
                             class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center text-green-500 text-xl">
                             <i class="fa-solid fa-arrow-trend-up"></i>
                         </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Today's Profit</p>
-                            <h3 class="text-2xl font-bold text-gray-800" id="stat-today-profit">Rs 0</h3>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-center w-full">
+                                <p class="text-sm font-medium text-gray-500">Today's Profit</p>
+                                <button id="btn-toggle-profit" class="text-gray-400 hover:text-gray-600 focus:outline-none transition-colors">
+                                    <i id="icon-toggle-profit" class="fa-solid fa-eye-slash"></i>
+                                </button>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-800" id="stat-today-profit" data-value="0">****</h3>
                         </div>
                     </div>
                     <div
@@ -213,6 +218,54 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- AI Business Insights & Analytics Prediction -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- AI Business Insights -->
+                    <div class="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-2xl shadow-lg border border-indigo-800/50 overflow-hidden relative">
+                        <div class="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
+                            <i class="fa-solid fa-brain text-9xl text-white"></i>
+                        </div>
+                        <div class="p-5 border-b border-indigo-800/50 flex items-center justify-between relative z-10">
+                            <h3 class="font-bold text-white flex items-center gap-2 text-lg">
+                                <i class="fa-solid fa-wand-magic-sparkles text-yellow-400"></i> AI Business Insights
+                            </h3>
+                            <span class="text-xs font-medium bg-indigo-800/80 text-indigo-200 px-2 py-1 rounded-full border border-indigo-700/50">Auto-Generated</span>
+                        </div>
+                        <div class="p-5 relative z-10 h-[calc(100%-4.5rem)] overflow-y-auto custom-scrollbar">
+                            <div id="ai-insights-list" class="grid grid-cols-1 gap-4 text-sm">
+                                <!-- Insights populated by JS -->
+                                <div class="bg-white/10 rounded-xl p-4 border border-white/5 flex items-start gap-3">
+                                    <div class="mt-0.5 text-indigo-300 animate-pulse"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                                    <div class="text-indigo-100 leading-relaxed">Analyzing business data...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Prediction -->
+                    <div class="bg-gradient-to-br from-brand-900 to-blue-900 rounded-2xl shadow-lg border border-brand-800/50 overflow-hidden relative">
+                        <div class="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
+                            <i class="fa-solid fa-chart-line text-9xl text-white"></i>
+                        </div>
+                        <div class="p-5 border-b border-brand-800/50 flex items-center justify-between relative z-10">
+                            <h3 class="font-bold text-white flex items-center gap-2 text-lg">
+                                <i class="fa-solid fa-crystal-ball text-blue-300"></i> Analytics Prediction
+                            </h3>
+                            <span class="text-xs font-medium bg-brand-800/80 text-brand-200 px-2 py-1 rounded-full border border-brand-700/50">Forecast</span>
+                        </div>
+                        <div class="p-5 relative z-10 h-[calc(100%-4.5rem)] overflow-y-auto custom-scrollbar">
+                            <div id="analytics-prediction-list" class="grid grid-cols-1 gap-4 text-sm">
+                                <!-- Populated by JS -->
+                                <div class="bg-white/10 rounded-xl p-4 border border-white/5 flex items-start gap-3">
+                                    <div class="mt-0.5 text-brand-300 animate-pulse"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                                    <div class="text-brand-100 leading-relaxed">Calculating predictions...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </section>
 
             <!-- POS View -->
@@ -572,21 +625,28 @@
                             <div class="w-full">
                                 <div class="flex items-center justify-between">
                                     <h3 class="font-medium text-green-900">Google Drive Sync</h3>
-                                    <div id="gdrive-status" class="text-xs font-medium text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">Not Logged In</div>
+                                    <div id="gdrive-status"
+                                        class="text-xs font-medium text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">
+                                        Not Logged In</div>
                                 </div>
-                                <p class="text-sm text-green-800 mt-1 mb-3">Securely backup and restore your data directly to your Google Drive.</p>
-                                
+                                <p class="text-sm text-green-800 mt-1 mb-3">Securely backup and restore your data
+                                    directly to your Google Drive.</p>
+
                                 <div class="flex gap-2 flex-wrap" id="gdrive-actions">
-                                    <button id="btn-gdrive-login" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors flex items-center gap-2">
+                                    <button id="btn-gdrive-login"
+                                        class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors flex items-center gap-2">
                                         <i class="fa-brands fa-google text-red-500"></i> Login with Google
                                     </button>
-                                    <button id="btn-gdrive-backup" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm transition-colors hidden flex items-center gap-2">
+                                    <button id="btn-gdrive-backup"
+                                        class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm transition-colors hidden flex items-center gap-2">
                                         <i class="fa-solid fa-cloud-arrow-up"></i> Backup to Drive
                                     </button>
-                                    <button id="btn-gdrive-restore" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm transition-colors hidden flex items-center gap-2">
+                                    <button id="btn-gdrive-restore"
+                                        class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm transition-colors hidden flex items-center gap-2">
                                         <i class="fa-solid fa-cloud-arrow-down"></i> Restore from Drive
                                     </button>
-                                    <button id="btn-gdrive-logout" class="px-4 py-2 bg-white text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-50 shadow-sm transition-colors hidden">
+                                    <button id="btn-gdrive-logout"
+                                        class="px-4 py-2 bg-white text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-50 shadow-sm transition-colors hidden">
                                         Logout
                                     </button>
                                 </div>
@@ -676,8 +736,8 @@
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
 
-    <script src="js/db.js"></script>
-    <script src="js/app.js"></script>
+    <script src="db.js"></script>
+    <script src="app.js"></script>
 </body>
 
 </html>
